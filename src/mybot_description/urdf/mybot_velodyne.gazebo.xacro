@@ -1,0 +1,86 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <!-- ============================ ros_control plugin ============================ -->
+  <gazebo>
+    <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+    <robotNamespace>/mybot</robotNamespace>
+    <robotSimType>gazebo_ros_control/DefaultRobotHWSim</robotSimType>
+    </plugin>
+  </gazebo>
+
+  <gazebo>
+    <plugin name="differential_drive_controller" filename="libgazebo_ros_diff_drive.so">
+      <alwaysOn>true</alwaysOn>
+      <updateRate>20</updateRate>
+      <leftJoint>joint_left_wheel</leftJoint>
+      <rightJoint>joint_right_wheel</rightJoint>
+      <wheelSeparation>0.34</wheelSeparation>
+      <wheelDiameter>0.2</wheelDiameter>
+      <torque>20</torque>
+      <commandTopic>cmd_vel</commandTopic>
+      <odometryTopic>odom</odometryTopic>
+      <odometryFrame>odom</odometryFrame>
+      <robotBaseFrame>link_chassis</robotBaseFrame>
+    </plugin>
+  </gazebo>
+  
+  <gazebo reference="link_chassis">
+    <material>Gazebo/Orange</material>
+  </gazebo>
+  <gazebo reference="link_left_wheel">
+    <material>Gazebo/Blue</material>
+  </gazebo>
+  <gazebo reference="link_right_wheel">
+    <material>Gazebo/Blue</material>
+  </gazebo>
+  
+  <!-- ============================ lidar gazebo references ============================ -->
+  <gazebo reference="laz_base">
+    <material>Gazebo/Grey</material>
+  </gazebo>
+   
+  <gazebo reference="laz_rot">
+    <material>Gazebo/RedGlow</material>
+    <sensor type="ray" name="laz">
+       <always_on>true</always_on>
+       <pose>0 0 0 0 0 0</pose>
+       <visualize>true</visualize>
+       <update_rate>10</update_rate>
+       <ray>
+         <scan>
+           <horizontal>
+             <samples>1875</samples>
+             <resolution>1</resolution>
+             <min_angle>-${pi}</min_angle>
+             <max_angle>${pi}</max_angle>
+           </horizontal>
+           <vertical>
+             <samples>16</samples>
+             <resolution>1</resolution>
+             <min_angle>-${15.0*pi/180.0}</min_angle>
+             <max_angle>${15.0*pi/180.0}</max_angle>
+           </vertical>
+         </scan>
+          <range>
+           <min>0.3</min>
+           <max>50</max>
+           <resolution>0.001</resolution>
+         </range>
+         <noise>
+           <type>gaussian</type>
+           <mean>0.0</mean>
+           <stddev>0.0</stddev>
+         </noise>
+      </ray>
+      <plugin name="gazebo_ros_laser_controller" filename="libgazebo_ros_laser.so">
+        <topicName>mybot/laser/scan</topicName>
+        <frameName>laz_base</frameName>
+        <min_range>0.3</min_range>
+        <max_range>50</max_range>
+        <gaussianNoise>0.008</gaussianNoise>
+      </plugin>
+    </sensor>
+  </gazebo>
+
+</robot>

@@ -1,0 +1,203 @@
+<?xml version='1.0'?>
+<robot name="mybot" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:property name="package_name" value="mybot_description"/>
+  <xacro:property name="robot_name" value="mybot"/>
+  <xacro:property name="lidar_base_radius" value="0.05"/>
+  <xacro:property name="lidar_base_height" value="0.05"/>
+  <xacro:property name="laz_radius" value="0.04"/>
+  <xacro:property name="laz_height" value="0.1"/>
+
+  <xacro:include filename="$(find ${package_name})/urdf/mybot.gazebo.xacro" />
+  <xacro:include filename="$(find ${package_name})/urdf/materials.xacro" />
+  <xacro:include filename="$(find ${package_name})/urdf/macros.xacro" />
+  
+  <link name="link_chassis">
+    <!-- pose and inertial -->
+    <pose>0 0 0.1 0 0 0</pose>
+    
+    <inertial>
+      <mass value="5"/>
+      <origin rpy="0 0 0" xyz="0 0 0.1"/>
+      <inertia 
+        ixx="0.0395416666667" ixy="0" ixz="0"
+        iyy="0.106208333333" iyz="0" izz="0.106208333333"/>
+    </inertial>
+    
+    
+    <!-- body -->
+    <collision name="collision_chassis">
+      <geometry>
+        <box size="0.5 0.3 0.07"/>
+      </geometry>
+    </collision>
+    
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <box size="0.5 0.3 0.07"/>
+      </geometry>
+      <material name="blue"/>
+    </visual>
+    
+    
+    <!-- spherical caster in body front -->
+    <collision name="caster_collision">
+      <origin rpy=" 0 0 0" xyz="0.35 0 -0.05"/>
+      <geometry>
+        <sphere radius="0.05"/>
+      </geometry>
+      <surface>
+        <friction>
+          <ode>
+            <mu>0</mu>
+            <mu2>0</mu2>
+            <slip1>1.0</slip1>
+            <slip2>1.0</slip2>
+          </ode>
+        </friction>
+      </surface>
+    </collision>
+    
+    <visual name="caster_visual">
+      <origin rpy=" 0 0 0" xyz="0.2 0 -0.05"/>
+      <geometry>
+        <sphere radius="0.05"/>
+      </geometry>
+    </visual>
+  </link>
+  
+  <!-- Use macros to define links, joints, and trasmission for rear wheels
+       Note: transmission is what makes wheels controllable-->
+  <xacro:link_wheel name="link_right_wheel" />
+  <xacro:joint_wheel name="joint_right_wheel" child="link_right_wheel" origin_xyz="-0.05 0.15 0" />
+  <xacro:trans_wheel name="transmission_right_wheel" joint="joint_right_wheel"/>
+
+  <xacro:link_wheel name="link_left_wheel" />
+  <xacro:joint_wheel name="joint_left_wheel" child="link_left_wheel" origin_xyz="-0.05 -0.15 0" />
+  <xacro:trans_wheel name="transmission_left_wheel" joint="joint_left_wheel"/>
+  
+  <!-- controller requires an extra dummy link that nulls the inertia -->
+  <link name="dummy">
+  </link>
+  <joint name="dummy_joint" type="fixed">
+     <parent link="dummy"/>
+     <child link="link_chassis"/>
+   </joint>
+   
+   
+<!-- Define sensors and attach them to the vehicle chassis --> 
+  
+  
+<!-- =============================== LIDAR =============================== -->
+  <link name="laz_base">
+    <visual>
+      <geometry>
+        <cylinder length="${lidar_base_height}" radius="${lidar_base_radius}"/>
+      </geometry>
+    </visual>
+
+    <collision>
+      <geometry>
+        <cylinder length="${lidar_base_height}" radius="${lidar_base_radius}"/>
+      </geometry>
+    </collision>
+
+    <inertial>
+      <mass value="0.1"/>
+      <inertia ixx="${(1/12) * 0.1 * (3 * lidar_base_radius * lidar_base_radius + lidar_base_height * lidar_base_height)}" ixy="0" ixz="0" iyy="${(1/12) * 0.1 * (3 * lidar_base_radius * lidar_base_radius + lidar_base_height * lidar_base_height)}" iyz="0" izz="${(1/2) * 0.1 * lidar_base_radius * lidar_base_radius}"/>
+    </inertial>
+  </link>
+
+  <link name="laz_rot">
+    <visual>
+      <geometry>
+        <cylinder length="${laz_height}" radius="${laz_radius}"/>
+      </geometry>
+    </visual>
+
+    <collision>
+      <geometry>
+        <cylinder length="${laz_height}" radius="${laz_radius}"/>
+      </geometry>
+    </collision>
+
+    <inertial>
+      <mass value="0.1"/>
+      <inertia ixx="${(1/12) * 0.1 * (3 * laz_radius * laz_radius + laz_height * laz_height)}" ixy="0" ixz="0" iyy="${(1/12) * 0.1 * (3 * laz_radius * laz_radius + laz_height * laz_height)}" iyz="0" izz="${(1/2) * 0.1 * laz_radius * laz_radius}"/>
+    </inertial>
+  </link>
+
+  <joint name="lazRot" type="fixed">
+    <parent link="laz_base"/>
+    <child link="laz_rot"/>
+    <origin xyz = "0 0 ${lidar_base_height/2}"/>
+  </joint>
+
+  <!-- Attach Lidar to the Vehicle Body -->  
+  <joint name="lidar_joint" type="fixed">
+    <origin xyz="0 0 0.1" rpy="0 0 0"/>
+    <parent link="link_chassis"/>
+    <child link="laz_base"/>
+  </joint>
+  
+<!-- =============================== Cameras =============================== -->
+  <!-- Make a simple base for the cameras to sit on -->
+  <link name="camera_base">
+    <collision>
+      <geometry>
+        <box size="0.5 0.3 0.01"/>
+      </geometry>
+    </collision>
+    
+    <visual>
+      <geometry>
+        <box size="0.5 0.3 0.01"/>
+      </geometry>
+      <material name="grey"/>
+    </visual>
+  </link>
+  
+  <joint name="camera_base_joint" type="fixed">
+    <origin xyz="0 0 0.205" rpy="0 0 0"/>
+    <parent link="link_chassis"/>
+    <child link="camera_base"/>
+  </joint>
+
+  
+  <!-- Use macros to define links and joints for all four cameras -->
+  <xacro:link_camera name="link_front_camera" direction_rpy="0 0 0" />
+  <xacro:joint_camera name="joint_front_camera" child="link_front_camera" origin_xyz="0.225 0 0.235" />
+  
+  <xacro:link_camera name="link_right_camera" direction_rpy="0 0 -1.5707" />
+  <xacro:joint_camera name="joint_right_camera" child="link_right_camera" origin_xyz="0 -0.125 0.235" />
+  
+  <xacro:link_camera name="link_left_camera" direction_rpy="0 0 1.5707"  />
+  <xacro:joint_camera name="joint_left_camera" child="link_left_camera" origin_xyz="0 0.125 0.235" />
+  
+  <xacro:link_camera name="link_rear_camera" direction_rpy="0 0 ${pi}" />
+  <xacro:joint_camera name="joint_rear_camera" child="link_rear_camera" origin_xyz="-0.225 0 0.235" />
+  
+<!-- =============================== Inertial Measurement Unit (IMU) =============================== -->
+  <link name="link_imu">
+    <collision>
+      <geometry>
+        <box size="0.05 0.1 0.025"/>
+      </geometry>
+    </collision>
+    
+    <visual>
+      <geometry>
+        <box size="0.05 0.1 0.025"/>
+      </geometry>
+      <material name="brown"/>
+    </visual>
+  </link>
+  
+  <joint name="joint_imu" type="fixed">
+    <origin xyz="0 0 0.2225" rpy="0 0 0"/>
+    <parent link="link_chassis"/>
+    <child link="link_imu"/>
+  </joint>
+ 
+</robot>
